@@ -79,16 +79,52 @@ All out-of-band; the mux never exposes debug tools to MCP clients.
 
 The log lives at `~/.local/state/cdmcp-mux/mux.log`.
 
-## How it works (one paragraph)
+## How it works
 
-The mux advertises exactly the same tool schemas as vanilla
-`chrome-devtools-mcp` — `pageId` and `isolatedContext` are stripped from what
-the client sees, and re-injected on every `tools/call` from the daemon's
-per-connection ownership table. Atomicity uses upstream's
+```mermaid
+flowchart TB
+    subgraph clients["one process per MCP client"]
+      direction LR
+      C1["Claude Code #1"] -- "stdio (MCP)" --> S1["cdmcp-mux shim"]
+      C2["Claude Code #2"] -- "stdio (MCP)" --> S2["cdmcp-mux shim"]
+    end
+
+    subgraph shared["shared — auto-spawned on first connect"]
+      direction TB
+      D["mux daemon<br/><i>per-connection context table</i><br/>(socket fd → ctxId → owned pageIds)"]
+      U["chrome-devtools-mcp subprocess<br/><code>--experimentalPageIdRouting</code><br/><code>--userDataDir &lt;fixed&gt;</code>"]
+      B["Chromium<br/><i>one instance, one profile</i>"]
+      D -- "stdio (MCP)<br/>rewrite + filter" --> U
+      U -- "CDP" --> B
+    end
+
+    S1 -- "unix socket" --> D
+    S2 -- "unix socket" --> D
+
+    classDef client fill:#e3f2fd,stroke:#1976d2
+    classDef shim fill:#fff3e0,stroke:#f57c00
+    classDef core fill:#f3e5f5,stroke:#7b1fa2
+    classDef browser fill:#e8f5e9,stroke:#388e3c
+    class C1,C2 client
+    class S1,S2 shim
+    class D,U core
+    class B browser
+```
+
+Each MCP client spawns its own `cdmcp-mux` shim (that's how `.mcp.json` works —
+one child per client). The shim is a pure byte pipe between the client's stdio
+and a unix socket; the first shim to connect auto-spawns the shared daemon,
+later shims attach to it. The daemon owns **one** `chrome-devtools-mcp`
+subprocess driving **one** Chromium with **one** `--userDataDir`.
+
+Every unix-socket connection = one fresh `BrowserContext` (isolated cookies,
+localStorage, WebSockets). The daemon advertises exactly the same tool schemas
+as vanilla `chrome-devtools-mcp` — `pageId` and `isolatedContext` are stripped
+from what the client sees, and re-injected on every `tools/call` from the
+daemon's per-connection ownership table. Atomicity uses upstream's
 `--experimentalPageIdRouting`, so concurrent calls from different contexts
-can't clobber each other. Each client's connection gets its own
-`BrowserContext` (isolated cookies, localStorage, WebSockets). When a client
-disconnects, its tabs are closed and its context destroyed.
+can't clobber each other. When a client disconnects, its tabs are closed and
+its browser context destroyed.
 
 ## Development notes
 
