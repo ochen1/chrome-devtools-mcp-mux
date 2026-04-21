@@ -5,16 +5,16 @@ Claude Code session, for example — gets its own isolated set of tabs, while
 they all run against the same single browser and profile.
 
 <p align="center">
-  <a href="demo/artifacts/mux-demo.mp4">
+  <a href="demo/artifacts/mux-demo-condensed.mp4">
     <img src="demo/artifacts/final-frame.png" alt="Two MCP clients, one Chrome, each seeing only its own tab — click for video" width="100%">
   </a>
 </p>
 
-<p align="center"><em>Click the image to watch the recorded demo (2:26, 2.5 MB). Source in <a href="demo/">demo/</a>.</em></p>
+<p align="center"><em>Click the image to watch the <strong>condensed demo</strong> (9 s, 270 KB — idle pauses auto-squeezed to 0.5 s). <a href="demo/artifacts/mux-demo.mp4">Full 2:26 recording</a>. Reproducer in <a href="demo/">demo/</a>.</em></p>
 
-<video src="demo/artifacts/mux-demo.mp4" controls width="100%" poster="demo/artifacts/final-frame.png">
+<video src="demo/artifacts/mux-demo-condensed.mp4" controls width="100%" poster="demo/artifacts/final-frame.png">
   Your browser doesn't support inline video.
-  <a href="demo/artifacts/mux-demo.mp4">Download the demo recording</a>.
+  <a href="demo/artifacts/mux-demo-condensed.mp4">Download the condensed demo</a>.
 </video>
 
 ## What problem does this solve

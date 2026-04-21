@@ -5,20 +5,55 @@ of the multiplexer: two fully independent MCP clients attach to one
 `cdmcp-mux` daemon, each sees only its own tab via `list_pages`, and both tabs
 are visible side by side in one Chromium instance with one `user-data-dir`.
 
-The recorded artifact is at [`artifacts/mux-demo.mp4`](artifacts/mux-demo.mp4)
-(2:26, 1280×800, 2.5 MB). A still of the final composed frame is at
+Two recordings are shipped in [`artifacts/`](artifacts/):
+
+- [`mux-demo-condensed.mp4`](artifacts/mux-demo-condensed.mp4) — 9 s, 270 KB.
+  Idle frames (waiting for Chromium to launch, holding the final frame, etc.)
+  are auto-compressed to 0.5 s each. Use this one for a quick walk-through.
+- [`mux-demo.mp4`](artifacts/mux-demo.mp4) — the original 2:26, 2.5 MB capture
+  at 1:1 speed. Use this if you want to read every log line as it streams.
+
+A still of the final composed frame is at
 [`artifacts/final-frame.png`](artifacts/final-frame.png).
 
 <p align="center">
-  <a href="artifacts/mux-demo.mp4">
-    <img src="artifacts/final-frame.png" alt="Final frame: four xterms and two Chrome windows showing per-client isolation — click for video" width="100%">
+  <a href="artifacts/mux-demo-condensed.mp4">
+    <img src="artifacts/final-frame.png" alt="Final frame: four xterms and two Chrome windows showing per-client isolation — click for condensed video" width="100%">
   </a>
 </p>
 
-<video src="artifacts/mux-demo.mp4" controls width="100%" poster="artifacts/final-frame.png">
+<video src="artifacts/mux-demo-condensed.mp4" controls width="100%" poster="artifacts/final-frame.png">
   Your browser doesn't support inline video.
-  <a href="artifacts/mux-demo.mp4">Download the demo recording</a>.
+  <a href="artifacts/mux-demo-condensed.mp4">Download the condensed demo</a>.
 </video>
+
+### How the condensed version was made
+
+The condenser lives in [`analysis/`](../demo/analysis/). It's a three-step
+pipeline driven by ffmpeg + Python:
+
+1. `analyze.py` — extracts per-frame `lavfi.scene_score` via
+   `ffmpeg -vf "select='gte(scene,0)',metadata=print"`, buckets them into a
+   log-scale histogram, and reports the bimodal split (in this video: ~80% of
+   frames effectively zero, compression noise below 1e-4, real motion above).
+2. `plan.py` — picks a still-vs-active threshold (1e-4 here), glues runs
+   separated by ≤3-frame flickers (cursor blinks etc.), and emits
+   [`plan.json`](analysis/plan.json): a list of `keep`/`squeeze` segments.
+   Each `squeeze` idle run ≥0.5 s gets compressed to exactly 0.5 s.
+3. `build_filter.py` — writes [`filter.txt`](analysis/filter.txt), an ffmpeg
+   `-filter_complex_script` that splits the input into segments, `setpts`'s
+   each by its speed factor, and concats.
+
+To re-run it against your own capture:
+
+```bash
+ffmpeg -i in.mp4 -vf "select='gte(scene,0)',metadata=print:file=/tmp/scores.txt" -an -f null -
+# adjust the IDLE_THRESH in plan.py if your video's histogram is shaped differently
+python3 demo/analysis/plan.py
+python3 demo/analysis/build_filter.py
+ffmpeg -i in.mp4 -filter_complex_script /tmp/motion/filter.txt -map "[outv]" -r 15 \
+  -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p out.mp4
+```
 
 ## What the demo proves, at a glance
 
