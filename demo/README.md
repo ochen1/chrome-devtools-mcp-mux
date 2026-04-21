@@ -5,27 +5,23 @@ of the multiplexer: two fully independent MCP clients attach to one
 `cdmcp-mux` daemon, each sees only its own tab via `list_pages`, and both tabs
 are visible side by side in one Chromium instance with one `user-data-dir`.
 
-Two recordings are shipped in [`artifacts/`](artifacts/):
+Three recordings are shipped in [`artifacts/`](artifacts/):
 
-- [`mux-demo-condensed.mp4`](artifacts/mux-demo-condensed.mp4) — 9 s, 270 KB.
-  Idle frames (waiting for Chromium to launch, holding the final frame, etc.)
-  are auto-compressed to 0.5 s each. Use this one for a quick walk-through.
-- [`mux-demo.mp4`](artifacts/mux-demo.mp4) — the original 2:26, 2.5 MB capture
-  at 1:1 speed. Use this if you want to read every log line as it streams.
+- [`mux-demo.gif`](artifacts/mux-demo.gif) — 720p, 12 fps, 465 KB. The inline
+  loop above and on the top-level README. Auto-plays in any markdown renderer.
+- [`mux-demo-condensed.mp4`](artifacts/mux-demo-condensed.mp4) — 1280×800, 9 s,
+  270 KB. Same pacing as the gif but full resolution. Idle waits squeezed to
+  0.5 s each.
+- [`mux-demo.mp4`](artifacts/mux-demo.mp4) — 1280×800, 2:26, 2.5 MB. The raw
+  capture at 1:1 speed. Use this if you want to read every log line as it
+  streams.
 
 A still of the final composed frame is at
 [`artifacts/final-frame.png`](artifacts/final-frame.png).
 
 <p align="center">
-  <a href="artifacts/mux-demo-condensed.mp4">
-    <img src="artifacts/final-frame.png" alt="Final frame: four xterms and two Chrome windows showing per-client isolation — click for condensed video" width="100%">
-  </a>
+  <img src="artifacts/mux-demo.gif" alt="Final composed state: four xterms and two Chrome windows showing per-client isolation" width="100%">
 </p>
-
-<video src="artifacts/mux-demo-condensed.mp4" controls width="100%" poster="artifacts/final-frame.png">
-  Your browser doesn't support inline video.
-  <a href="artifacts/mux-demo-condensed.mp4">Download the condensed demo</a>.
-</video>
 
 ### How the condensed version was made
 
