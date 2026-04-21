@@ -71,7 +71,9 @@ export class Upstream extends EventEmitter {
       if (this.opts.executablePath) {
         args.push('--executablePath', this.opts.executablePath);
       }
-      if (this.opts.headless !== false) {
+      // Match vanilla chrome-devtools-mcp: headful by default. Only force
+      // --headless=true when opts.headless is explicitly set to true.
+      if (this.opts.headless === true) {
         args.push('--headless=true');
       }
     }

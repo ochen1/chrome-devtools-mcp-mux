@@ -26,7 +26,8 @@ if [ -z "${CDMCP_MUX_CHROMIUM:-}" ]; then
   export CDMCP_MUX_CHROMIUM="$_SCRIPT_DIR/chromium-wrap.sh"
 fi
 
-# Make Chrome visible (non-headless) for the demo
+# Headful is the default now (matching vanilla chrome-devtools-mcp), but set
+# it explicitly so the demo is robust against future default changes.
 export CDMCP_MUX_HEADLESS=false
 
 # Convenience display

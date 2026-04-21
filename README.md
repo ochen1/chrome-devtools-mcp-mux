@@ -32,6 +32,7 @@ are rejected before they ever reach the browser.
 | Config shape | `npx -y chrome-devtools-mcp@latest` | `npx -y chrome-devtools-mcp-mux@latest` — literally one token different |
 | Tools exposed to clients | full vanilla surface | **identical** (pageId stays stripped; `isolatedContext` still exposed as opt-in) |
 | Chrome profile / cookies / logins / extensions | one `--userDataDir` | **same** `--userDataDir`, no forced incognito |
+| Headless vs. headful by default | headful | **headful** (matches vanilla; force headless with `CDMCP_MUX_HEADLESS=true`) |
 | Single client running alone | fine | fine — no behavior change, no overhead worth worrying about |
 | Two+ clients against one Chrome | **collide**: shared `list_pages`, racy `select_page`, cross-client `close_page` | **isolated at the tool layer**: `list_pages` per-client, cross-client tool calls rejected |
 | `new_page`'s optional `isolatedContext` | passes through | passes through (you can still opt in to per-tab isolation if you want it) |
@@ -129,7 +130,7 @@ For a full scripted demo with a recorded video, see [`demo/`](demo/).
 | `CDMCP_MUX_CHROMIUM`         | Chromium binary (defaults to bundled Puppeteer)    |
 | `CDMCP_MUX_USER_DATA_DIR`    | Override Chrome profile directory                  |
 | `CDMCP_MUX_SOCKET`           | Override unix socket path for the daemon           |
-| `CDMCP_MUX_HEADLESS`         | `false` makes Chrome visible (default: headless)   |
+| `CDMCP_MUX_HEADLESS`         | `true` forces headless (default: headful, matching vanilla `chrome-devtools-mcp`) |
 | `MCP_MUX_DEBUG`              | `1` logs every rewrite diff                        |
 
 ## Debugging

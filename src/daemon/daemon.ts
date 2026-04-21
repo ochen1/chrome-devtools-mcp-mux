@@ -52,7 +52,9 @@ export class Daemon {
     if (process.env.CDMCP_MUX_CHROMIUM) {
       envUpstream.executablePath = process.env.CDMCP_MUX_CHROMIUM;
     }
-    if (process.env.CDMCP_MUX_HEADLESS === 'false') {
+    if (process.env.CDMCP_MUX_HEADLESS === 'true') {
+      envUpstream.headless = true;
+    } else if (process.env.CDMCP_MUX_HEADLESS === 'false') {
       envUpstream.headless = false;
     }
     this.#upstream = new Upstream({...envUpstream, ...opts.upstream});

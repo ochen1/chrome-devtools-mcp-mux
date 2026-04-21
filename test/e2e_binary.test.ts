@@ -123,6 +123,9 @@ describe('E2E — compiled cdmcp-mux binary, real Chromium, auto-spawn daemon', 
     // fall back to /usr/bin/chromium for local dev.
     env.CDMCP_MUX_CHROMIUM =
       process.env.CDMCP_MUX_CHROMIUM ?? '/usr/bin/chromium';
+    // The test suite runs on headless CI boxes without an X display, so force
+    // headless for the subprocess path (Driver sets it directly).
+    env.CDMCP_MUX_HEADLESS = 'true';
 
     // Spawn first shim; it'll auto-spawn the daemon.
     const procA = spawn(process.execPath, [binPath], {
