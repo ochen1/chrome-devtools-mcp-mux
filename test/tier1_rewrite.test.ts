@@ -68,11 +68,12 @@ describe('Tier 1 — schema stripping', () => {
     expect(stripped.inputSchema!.properties).toHaveProperty('url');
   });
 
-  it('strips isolatedContext from new_page schema', () => {
+  it('keeps isolatedContext on new_page schema (user-facing opt-in knob)', () => {
     const stripped = stripToolSchema(toolsWithInjection[0]);
-    expect(stripped.inputSchema!.properties).not.toHaveProperty(
-      'isolatedContext',
-    );
+    // new_page exposes `isolatedContext` identically to vanilla upstream —
+    // the mux no longer force-injects it, so it must remain visible to the
+    // caller as an optional parameter.
+    expect(stripped.inputSchema!.properties).toHaveProperty('isolatedContext');
     expect(stripped.inputSchema!.properties).toHaveProperty('url');
     expect(stripped.inputSchema!.required).toEqual(['url']);
   });
@@ -115,7 +116,7 @@ describe('Tier 1 — schema stripping', () => {
 describe('Tier 1 — tool-call rewrite', () => {
   const specs = indexToolSpecs(toolsWithInjection);
 
-  it('new_page: always injects isolatedContext', () => {
+  it('new_page: does NOT inject isolatedContext by default (shares user profile)', () => {
     const ctx = new MuxContext();
     const r = rewriteToolCall(
       'new_page',
@@ -124,18 +125,18 @@ describe('Tier 1 — tool-call rewrite', () => {
       specs,
     );
     expect(r.params.url).toBe('https://example.com');
-    expect(r.params.isolatedContext).toBe(ctx.isolatedContext);
+    expect(r.params).not.toHaveProperty('isolatedContext');
   });
 
-  it('new_page: overrides any caller-supplied isolatedContext', () => {
+  it('new_page: passes through caller-supplied isolatedContext verbatim', () => {
     const ctx = new MuxContext();
     const r = rewriteToolCall(
       'new_page',
-      {url: 'u', isolatedContext: 'hacker-wants-to-escape'},
+      {url: 'u', isolatedContext: 'my-isolated-workspace'},
       ctx,
       specs,
     );
-    expect(r.params.isolatedContext).toBe(ctx.isolatedContext);
+    expect(r.params.isolatedContext).toBe('my-isolated-workspace');
   });
 
   it('navigate_page: injects selected pageId when missing', () => {

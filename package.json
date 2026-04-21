@@ -1,7 +1,7 @@
 {
   "name": "chrome-devtools-mcp-mux",
-  "version": "0.1.0",
-  "description": "Multiplexes multiple MCP clients onto a single chrome-devtools-mcp / Chrome instance, with per-client tab isolation.",
+  "version": "0.2.0",
+  "description": "Drop-in chrome-devtools-mcp multiplexer: lets multiple MCP clients share one Chrome instance and profile, with per-client tab ownership so they don't step on each other's tabs.",
   "type": "module",
   "license": "Apache-2.0",
   "author": "Oliver Chen",

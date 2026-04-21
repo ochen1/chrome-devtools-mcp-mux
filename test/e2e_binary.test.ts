@@ -156,14 +156,16 @@ describe('E2E — compiled cdmcp-mux binary, real Chromium, auto-spawn daemon', 
       expect(bText).toContain('/e2e-b');
       expect(bText).not.toContain('/e2e-a');
 
-      // tools/list is vanilla — no pageId / isolatedContext leaked to clients
+      // tools/list is vanilla — pageId is always hidden (injected internally);
+      // isolatedContext stays visible on new_page as an opt-in knob.
       const tl = await a.request('tools/list', {});
       for (const t of tl.result.tools) {
         if (t.inputSchema?.properties) {
           expect(t.inputSchema.properties).not.toHaveProperty('pageId');
-          expect(t.inputSchema.properties).not.toHaveProperty('isolatedContext');
         }
       }
+      const newPage = tl.result.tools.find((t: any) => t.name === 'new_page');
+      expect(newPage?.inputSchema?.properties).toHaveProperty('isolatedContext');
     } finally {
       a.close();
       b.close();

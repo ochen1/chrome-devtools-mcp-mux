@@ -12,7 +12,12 @@ export interface ToolDesc {
   [k: string]: unknown;
 }
 
-const INJECTED_PARAMS = ['pageId', 'isolatedContext'];
+// Parameters we hide from the advertised tool schemas. We still inject pageId
+// on every page-scoped call internally; we do NOT inject isolatedContext any
+// more — it stays as a user-facing optional knob on new_page (matching vanilla
+// chrome-devtools-mcp), so callers who want a fresh incognito-style context
+// can opt in by passing it, while the default case shares the user's profile.
+const INJECTED_PARAMS = ['pageId'];
 const NEW_PAGE_TOOL = 'new_page';
 const LIST_PAGES_TOOL = 'list_pages';
 const CLOSE_PAGE_TOOL = 'close_page';
@@ -88,10 +93,12 @@ export function rewriteToolCall(
   const params: Record<string, unknown> = {...(incoming ?? {})};
   const spec = specs.get(toolName);
 
-  // new_page: force isolatedContext to this ctx's context name.
+  // new_page: pass through. Ownership of the resulting pageId is recorded
+  // from the upstream response (see extractNewPageId). The caller's
+  // optional `isolatedContext` is preserved verbatim — we don't force
+  // isolation, so the user's profile cookies remain available by default,
+  // and they can still opt into a fresh context by passing the field.
   if (toolName === NEW_PAGE_TOOL) {
-    // Caller may not set isolatedContext — we always set it.
-    params.isolatedContext = ctx.isolatedContext;
     return {params};
   }
 

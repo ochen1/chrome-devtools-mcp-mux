@@ -24,17 +24,21 @@ async function listPages(shim: ShimClient): Promise<number[]> {
 }
 
 describe('Tier 2 — ownership & isolation', () => {
-  it('tools/list strips pageId and isolatedContext', async () => {
+  it('tools/list strips pageId but preserves isolatedContext on new_page', async () => {
     const shim = await driver.newShim();
     const resp = (await shim.request('tools/list', {})) as any;
     const tools = resp.result.tools as Array<any>;
     expect(tools.length).toBeGreaterThan(0);
     for (const t of tools) {
       if (t.inputSchema?.properties) {
+        // pageId is always stripped — mux injects it internally.
         expect(t.inputSchema.properties).not.toHaveProperty('pageId');
-        expect(t.inputSchema.properties).not.toHaveProperty('isolatedContext');
       }
     }
+    // new_page keeps isolatedContext as a user-facing opt-in.
+    const newPage = tools.find((t) => t.name === 'new_page');
+    expect(newPage).toBeDefined();
+    expect(newPage.inputSchema.properties).toHaveProperty('isolatedContext');
     shim.close();
   });
 
@@ -55,30 +59,25 @@ describe('Tier 2 — ownership & isolation', () => {
     expect(state.pages.length).toBe(2);
   });
 
-  it('isolatedContext is always injected on new_page upstream', async () => {
+  it('new_page without isolatedContext reaches upstream unchanged (shares profile)', async () => {
     const a = await driver.newShim();
     await newPage(a, 'https://foo/');
     const tape = await driver.drainTape();
     const np = tape.find((e) => e.name === 'new_page');
     expect(np).toBeDefined();
-    expect(typeof np!.arguments.isolatedContext).toBe('string');
-    expect((np!.arguments.isolatedContext as string).startsWith('ctx-')).toBe(
-      true,
-    );
+    // No auto-injection — the default browser context (= user profile) is used.
+    expect(np!.arguments).not.toHaveProperty('isolatedContext');
   });
 
-  it('caller-supplied isolatedContext is overridden', async () => {
+  it('caller-supplied isolatedContext is passed through verbatim', async () => {
     const a = await driver.newShim();
     await a.call('new_page', {
       url: 'https://foo/',
-      isolatedContext: 'attacker-foo',
+      isolatedContext: 'my-isolated-workspace',
     });
     const tape = await driver.drainTape();
     const np = tape.find((e) => e.name === 'new_page');
-    expect(np!.arguments.isolatedContext).not.toBe('attacker-foo');
-    expect((np!.arguments.isolatedContext as string).startsWith('ctx-')).toBe(
-      true,
-    );
+    expect(np!.arguments.isolatedContext).toBe('my-isolated-workspace');
   });
 
   it('page-scoped tool call without pageId injects ctx-selected pageId', async () => {

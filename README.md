@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ochen1/chrome-devtools-mcp-mux/actions/workflows/ci.yml/badge.svg)](https://github.com/ochen1/chrome-devtools-mcp-mux/actions/workflows/ci.yml)
 
-Share one Chrome instance across many MCP clients. Each client — a separate
+**Drop-in replacement for `chrome-devtools-mcp`** that lets many MCP clients share one Chrome instance and one profile without stepping on each other's tabs. Each client — a separate
 Claude Code session, for example — gets its own isolated set of tabs, while
 they all run against the same single browser and profile.
 
@@ -23,28 +23,53 @@ in the wrong window.
 `cdmcp-mux` sits between clients and `chrome-devtools-mcp` and gives each
 connection its own isolated tab set, while keeping a single Chrome running.
 
-## Install and configure (one-time)
+## Install and configure
+
+If your `.mcp.json` currently looks like this (the canonical upstream setup):
+
+```jsonc
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    }
+  }
+}
+```
+
+change `chrome-devtools-mcp@latest` to `chrome-devtools-mcp-mux@latest` and
+you're done:
+
+```jsonc
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp-mux@latest"]
+    }
+  }
+}
+```
+
+The first client to connect auto-spawns a shared daemon; subsequent clients
+attach to the same daemon. Each gets its own view of tabs, but they all live
+in the same Chrome profile — so your cookies, logins, and extensions are the
+same as with vanilla `chrome-devtools-mcp`.
+
+<details>
+<summary>Local-dev install (building from source)</summary>
 
 ```bash
-git clone <this-repo> chrome-devtools-mcp-mux
+git clone https://github.com/ochen1/chrome-devtools-mcp-mux
 cd chrome-devtools-mcp-mux
 npm install
 npm run build
 npm link           # exposes `cdmcp-mux` on PATH
 ```
 
-Then, in every MCP client's `.mcp.json`:
-
-```jsonc
-{
-  "mcpServers": {
-    "chrome": { "command": "cdmcp-mux" }
-  }
-}
-```
-
-That's it. The first client to connect auto-spawns a shared daemon; subsequent
-clients attach to the same daemon.
+Then `"command": "cdmcp-mux"` in `.mcp.json`.
+</details>
 
 ## How to verify it's working
 
@@ -91,9 +116,9 @@ flowchart TB
 
     subgraph shared["shared — auto-spawned on first connect"]
       direction TB
-      D["mux daemon<br/><i>per-connection context table</i><br/>(socket fd → ctxId → owned pageIds)"]
+      D["mux daemon<br/><i>per-connection ownership table</i><br/>(socket fd → ctxId → owned pageIds)"]
       U["chrome-devtools-mcp subprocess<br/><code>--experimentalPageIdRouting</code><br/><code>--userDataDir &lt;fixed&gt;</code>"]
-      B["Chromium<br/><i>one instance, one profile</i>"]
+      B["Chromium<br/><i>one instance, one profile<br/>cookies shared across clients</i>"]
       D -- "stdio (MCP)<br/>rewrite + filter" --> U
       U -- "CDP" --> B
     end
@@ -117,14 +142,20 @@ and a unix socket; the first shim to connect auto-spawns the shared daemon,
 later shims attach to it. The daemon owns **one** `chrome-devtools-mcp`
 subprocess driving **one** Chromium with **one** `--userDataDir`.
 
-Every unix-socket connection = one fresh `BrowserContext` (isolated cookies,
-localStorage, WebSockets). The daemon advertises exactly the same tool schemas
-as vanilla `chrome-devtools-mcp` — `pageId` and `isolatedContext` are stripped
-from what the client sees, and re-injected on every `tools/call` from the
-daemon's per-connection ownership table. Atomicity uses upstream's
-`--experimentalPageIdRouting`, so concurrent calls from different contexts
-can't clobber each other. When a client disconnects, its tabs are closed and
-its browser context destroyed.
+The daemon advertises the same tool schemas as vanilla `chrome-devtools-mcp`.
+Every connection gets its own *ownership table* of pageIds it created; the
+daemon filters `list_pages` to that set and rejects cross-context calls to
+`close_page`, `select_page`, and other page-scoped tools. `pageId` is stripped
+from the advertised schemas and re-injected internally on every `tools/call`,
+so concurrent calls from different clients always target the right tab —
+backed by upstream's `--experimentalPageIdRouting`.
+
+Tabs are **not** forced into isolated browser contexts — all clients share the
+same Chrome profile, so your cookies and logins work the same as with vanilla
+`chrome-devtools-mcp`. The `isolatedContext` parameter on `new_page` stays
+exposed exactly like upstream: if a client *wants* an incognito-style context,
+it passes it, and the mux forwards it verbatim. When a client disconnects, the
+daemon closes every tab it owned and the rest keep running.
 
 ## Development notes
 
