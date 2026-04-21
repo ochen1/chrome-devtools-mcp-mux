@@ -9,7 +9,16 @@ The recorded artifact is at [`artifacts/mux-demo.mp4`](artifacts/mux-demo.mp4)
 (2:26, 1280×800, 2.5 MB). A still of the final composed frame is at
 [`artifacts/final-frame.png`](artifacts/final-frame.png).
 
-![Final frame: four xterms and two Chrome windows showing per-client isolation](artifacts/final-frame.png)
+<p align="center">
+  <a href="artifacts/mux-demo.mp4">
+    <img src="artifacts/final-frame.png" alt="Final frame: four xterms and two Chrome windows showing per-client isolation — click for video" width="100%">
+  </a>
+</p>
+
+<video src="artifacts/mux-demo.mp4" controls width="100%" poster="artifacts/final-frame.png">
+  Your browser doesn't support inline video.
+  <a href="artifacts/mux-demo.mp4">Download the demo recording</a>.
+</video>
 
 ## What the demo proves, at a glance
 
