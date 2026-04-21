@@ -3,13 +3,43 @@
   "version": "0.1.0",
   "description": "Multiplexes multiple MCP clients onto a single chrome-devtools-mcp / Chrome instance, with per-client tab isolation.",
   "type": "module",
+  "license": "Apache-2.0",
+  "author": "Oliver Chen",
+  "homepage": "https://github.com/ochen1/chrome-devtools-mcp-mux#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ochen1/chrome-devtools-mcp-mux.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ochen1/chrome-devtools-mcp-mux/issues"
+  },
+  "keywords": [
+    "mcp",
+    "chrome-devtools",
+    "chrome-devtools-mcp",
+    "multiplexer",
+    "claude-code",
+    "puppeteer"
+  ],
   "bin": {
     "cdmcp-mux": "dist/bin/cdmcp-mux.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "DEMO.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "engines": {
     "node": ">=20"

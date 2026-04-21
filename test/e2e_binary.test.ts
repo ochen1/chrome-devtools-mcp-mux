@@ -118,12 +118,11 @@ afterAll(async () => {
 describe('E2E — compiled cdmcp-mux binary, real Chromium, auto-spawn daemon', () => {
   it('two independent shim binaries isolate tabs end-to-end', async () => {
     const env = envForIsolatedRun(workDir);
-    // We do NOT use the default chrome-devtools-mcp launch (which would use
-    // an internal download); we need it to use our local chromium. The daemon
-    // exposes no CLI flag for this today, so we reach in via env var.
-    // Simpler path: set PUPPETEER_EXECUTABLE_PATH (chrome-devtools-mcp forwards
-    // to puppeteer).
-    env.CDMCP_MUX_CHROMIUM = '/usr/bin/chromium';
+    // Point the auto-spawned daemon at a local chromium via env var. Prefer an
+    // outer-set CDMCP_MUX_CHROMIUM (CI wraps google-chrome with --no-sandbox);
+    // fall back to /usr/bin/chromium for local dev.
+    env.CDMCP_MUX_CHROMIUM =
+      process.env.CDMCP_MUX_CHROMIUM ?? '/usr/bin/chromium';
 
     // Spawn first shim; it'll auto-spawn the daemon.
     const procA = spawn(process.execPath, [binPath], {

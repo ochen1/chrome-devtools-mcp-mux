@@ -1,0 +1,77 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run npm publish --dry-run only'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write    # required for npm provenance via OIDC
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify binary is runnable
+        run: node dist/bin/cdmcp-mux.js --help
+
+      - name: Verify version matches release tag
+        if: github.event_name == 'release'
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match release tag ($TAG_VERSION)"
+            exit 1
+          fi
+
+      - name: Prepare Chromium wrapper
+        run: |
+          cat > /tmp/chrome-wrap.sh <<'EOF'
+          #!/bin/bash
+          exec /usr/bin/google-chrome-stable --no-sandbox --disable-gpu --disable-dev-shm-usage "$@"
+          EOF
+          chmod +x /tmp/chrome-wrap.sh
+
+      - name: Run tests
+        env:
+          CDMCP_MUX_CHROMIUM: /tmp/chrome-wrap.sh
+        run: npm test
+
+      - name: Publish to npm (provenance)
+        if: ${{ !inputs.dry-run }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
+      - name: Dry-run publish
+        if: ${{ inputs.dry-run }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --dry-run

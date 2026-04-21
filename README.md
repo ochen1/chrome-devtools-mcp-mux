@@ -1,5 +1,7 @@
 # chrome-devtools-mcp-mux
 
+[![CI](https://github.com/ochen1/chrome-devtools-mcp-mux/actions/workflows/ci.yml/badge.svg)](https://github.com/ochen1/chrome-devtools-mcp-mux/actions/workflows/ci.yml)
+
 Share one Chrome instance across many MCP clients. Each client — a separate
 Claude Code session, for example — gets its own isolated set of tabs, while
 they all run against the same single browser and profile.
@@ -110,6 +112,26 @@ CDMCP_MUX_CHROMIUM=/usr/bin/chromium npm test
 
 Expected: `8 files, 58 tests, all passing`.
 
+## Releasing
+
+CI runs on every push and PR against `main` using Node 22 and 24, building,
+typechecking, and executing the full 58-test suite (including the real-Chromium
+smoke and binary-e2e tests).
+
+Publishing is automated via `.github/workflows/publish.yml`, which runs on a
+GitHub release being published:
+
+1. Bump `version` in `package.json`, commit, tag as `v<version>`.
+2. `gh release create v<version> --generate-notes`.
+3. The workflow builds, tests, and runs `npm publish` with
+   [npm provenance](https://docs.npmjs.com/generating-provenance-statements)
+   (signed via GitHub OIDC, the workflow has `id-token: write`).
+
+`NPM_TOKEN` is the only required repo secret. The package is published with
+`publishConfig.provenance: true`, so the `--provenance` flag is implicit.
+Once this repo is registered as a **trusted publisher** at npmjs.com, the
+`NPM_TOKEN` secret can be removed entirely.
+
 ## License
 
-Same as upstream `chrome-devtools-mcp`: Apache-2.0.
+Apache-2.0 — see [`LICENSE`](LICENSE). Same as upstream `chrome-devtools-mcp`.

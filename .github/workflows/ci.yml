@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24']
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check + build
+        run: npm run build
+
+      - name: Verify binary is runnable
+        run: node dist/bin/cdmcp-mux.js --help
+
+      # The smoke and e2e tests drive real Chromium. google-chrome-stable is
+      # pre-installed on GitHub-hosted ubuntu-latest runners; wrap it with the
+      # --no-sandbox flag that most CI sandboxes require.
+      - name: Prepare Chromium wrapper
+        run: |
+          cat > /tmp/chrome-wrap.sh <<'EOF'
+          #!/bin/bash
+          exec /usr/bin/google-chrome-stable --no-sandbox --disable-gpu --disable-dev-shm-usage "$@"
+          EOF
+          chmod +x /tmp/chrome-wrap.sh
+          /tmp/chrome-wrap.sh --version
+
+      - name: Run tests
+        env:
+          CDMCP_MUX_CHROMIUM: /tmp/chrome-wrap.sh
+        run: npm test
+
+      - name: Upload mux log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mux-log-node${{ matrix.node-version }}
+          path: |
+            ~/.local/state/cdmcp-mux/mux.log
+            /tmp/vdemo*/*.log
+          if-no-files-found: ignore
+          retention-days: 7
