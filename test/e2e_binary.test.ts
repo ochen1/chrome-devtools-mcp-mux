@@ -159,11 +159,15 @@ describe('E2E — compiled cdmcp-mux binary, real Chromium, auto-spawn daemon', 
       expect(bText).toContain('/e2e-b');
       expect(bText).not.toContain('/e2e-a');
 
-      // tools/list is vanilla — pageId is always hidden (injected internally);
-      // isolatedContext stays visible on new_page as an opt-in knob.
+      // tools/list surface check: optional pageId (injected internally) is
+      // hidden, required pageId on select_page / close_page stays visible.
       const tl = await a.request('tools/list', {});
+      const nativeRequiresPageId = new Set(['select_page', 'close_page']);
       for (const t of tl.result.tools) {
-        if (t.inputSchema?.properties) {
+        if (!t.inputSchema?.properties) continue;
+        if (nativeRequiresPageId.has(t.name)) {
+          expect(t.inputSchema.properties).toHaveProperty('pageId');
+        } else {
           expect(t.inputSchema.properties).not.toHaveProperty('pageId');
         }
       }

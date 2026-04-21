@@ -65,16 +65,20 @@ function tools(): ToolSpec[] {
   const pageIdProp = {
     pageId: {type: 'number', description: 'Page id'},
   };
-  const pageScoped = [
+  // Tools where `pageId` is added OPTIONAL by --experimentalPageIdRouting.
+  // The mux strips these.
+  const pageScopedOptional = [
     'navigate_page',
     'click',
     'fill',
     'take_screenshot',
     'take_snapshot',
     'evaluate_script',
-    'close_page',
-    'select_page',
   ];
+  // Tools where `pageId` is NATIVELY REQUIRED (matches real upstream). The
+  // mux must NOT strip these — otherwise the caller has no way to target
+  // a tab.
+  const pageScopedRequired = ['select_page', 'close_page'];
   const specs: ToolSpec[] = [
     {
       name: 'new_page',
@@ -103,13 +107,24 @@ function tools(): ToolSpec[] {
       },
     },
   ];
-  for (const name of pageScoped) {
+  for (const name of pageScopedOptional) {
     specs.push({
       name,
       description: `Page-scoped tool ${name}`,
       inputSchema: {
         type: 'object',
         properties: {...pageIdProp},
+      },
+    });
+  }
+  for (const name of pageScopedRequired) {
+    specs.push({
+      name,
+      description: `Page-scoped tool ${name} (native required pageId)`,
+      inputSchema: {
+        type: 'object',
+        properties: {...pageIdProp},
+        required: ['pageId'],
       },
     });
   }

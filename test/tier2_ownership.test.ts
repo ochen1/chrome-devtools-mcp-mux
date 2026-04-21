@@ -24,14 +24,22 @@ async function listPages(shim: ShimClient): Promise<number[]> {
 }
 
 describe('Tier 2 — ownership & isolation', () => {
-  it('tools/list strips pageId but preserves isolatedContext on new_page', async () => {
+  it('tools/list strips optional pageId but keeps required pageId + isolatedContext', async () => {
     const shim = await driver.newShim();
     const resp = (await shim.request('tools/list', {})) as any;
     const tools = resp.result.tools as Array<any>;
     expect(tools.length).toBeGreaterThan(0);
+
+    // Optional pageId injected by --experimentalPageIdRouting is hidden.
+    // Native required pageId (select_page / close_page) stays visible so
+    // callers can actually target a tab.
+    const nativeRequiresPageId = new Set(['select_page', 'close_page']);
     for (const t of tools) {
-      if (t.inputSchema?.properties) {
-        // pageId is always stripped — mux injects it internally.
+      if (!t.inputSchema?.properties) continue;
+      if (nativeRequiresPageId.has(t.name)) {
+        expect(t.inputSchema.properties).toHaveProperty('pageId');
+        expect(t.inputSchema.required ?? []).toContain('pageId');
+      } else {
         expect(t.inputSchema.properties).not.toHaveProperty('pageId');
       }
     }

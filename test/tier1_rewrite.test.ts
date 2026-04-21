@@ -78,9 +78,15 @@ describe('Tier 1 — schema stripping', () => {
     expect(stripped.inputSchema!.required).toEqual(['url']);
   });
 
-  it('removes pageId from required list', () => {
+  it('keeps pageId when it is REQUIRED (native to close_page / select_page)', () => {
+    // close_page.pageId is required upstream — it's how the caller names the
+    // target tab. Stripping it would leave the tool unusable.
     const stripped = stripToolSchema(toolsWithInjection[2]);
-    expect(stripped.inputSchema!.required).toEqual([]);
+    expect(stripped.inputSchema!.properties).toHaveProperty('pageId');
+    expect(stripped.inputSchema!.required).toEqual(['pageId']);
+    const strippedSelect = stripToolSchema(toolsWithInjection[3]);
+    expect(strippedSelect.inputSchema!.properties).toHaveProperty('pageId');
+    expect(strippedSelect.inputSchema!.required).toEqual(['pageId']);
   });
 
   it('leaves non-affected schemas unchanged', () => {
@@ -96,7 +102,7 @@ describe('Tier 1 — schema stripping', () => {
     );
   });
 
-  it('strips fields even when absent from required', () => {
+  it('strips optional pageId (no required array)', () => {
     const t: ToolDesc = {
       name: 't',
       inputSchema: {

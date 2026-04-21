@@ -27,18 +27,18 @@ export function stripToolSchema(tool: ToolDesc): ToolDesc {
   const schema = tool.inputSchema;
   if (!schema || !schema.properties) return tool;
   const props = {...schema.properties};
-  let required = schema.required;
+  const required = schema.required;
+  const requiredSet = new Set(required ?? []);
   let changed = false;
   for (const key of INJECTED_PARAMS) {
-    if (key in props) {
+    // Only strip when the field is *optional*. Required pageId is native to
+    // `select_page` / `close_page` (it identifies the target page); if we
+    // removed it the caller would have no way to specify which tab to act on
+    // — which is what actually happened in practice: an agent saw select_page
+    // with only `bringToFront` left, guessed `pageIdx` by analogy with other
+    // tools, and the mux rejected the call.
+    if (key in props && !requiredSet.has(key)) {
       delete props[key];
-      changed = true;
-    }
-  }
-  if (required) {
-    const filtered = required.filter((r) => !INJECTED_PARAMS.includes(r));
-    if (filtered.length !== required.length) {
-      required = filtered;
       changed = true;
     }
   }
