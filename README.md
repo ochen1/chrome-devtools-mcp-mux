@@ -16,12 +16,51 @@ they all run against the same single browser and profile.
 
 `chrome-devtools-mcp` exposes Chrome DevTools to an MCP client. It works
 perfectly for one client, but if two clients connect at once (two Claude Code
-windows, a Claude Code plus a Gemini CLI, etc.) they step on each other's
-tabs — `list_pages` shows everything, `select_page` races, `new_page` lands
-in the wrong window.
+windows, a Claude Code plus a Gemini CLI, a coding agent plus a test runner —
+anything using the same config) they step on each other's tabs: `list_pages`
+shows everything, `select_page` races, `new_page` lands in the wrong window,
+`close_page` can shut down another client's work.
 
-`cdmcp-mux` sits between clients and `chrome-devtools-mcp` and gives each
-connection its own isolated tab set, while keeping a single Chrome running.
+`cdmcp-mux` sits between the clients and `chrome-devtools-mcp` and tracks who
+owns which tab. Each client sees only its own tabs; cross-client collisions
+are rejected before they ever reach the browser.
+
+## vs. vanilla `chrome-devtools-mcp`
+
+| Concern | `chrome-devtools-mcp` | `chrome-devtools-mcp-mux` |
+|---|---|---|
+| Config shape | `npx -y chrome-devtools-mcp@latest` | `npx -y chrome-devtools-mcp-mux@latest` — literally one token different |
+| Tools exposed to clients | full vanilla surface | **identical** (pageId stays stripped; `isolatedContext` still exposed as opt-in) |
+| Chrome profile / cookies / logins / extensions | one `--userDataDir` | **same** `--userDataDir`, no forced incognito |
+| Single client running alone | fine | fine — no behavior change, no overhead worth worrying about |
+| Two+ clients against one Chrome | **collide**: shared `list_pages`, racy `select_page`, cross-client `close_page` | **isolated at the tool layer**: `list_pages` per-client, cross-client tool calls rejected |
+| `new_page`'s optional `isolatedContext` | passes through | passes through (you can still opt in to per-tab isolation if you want it) |
+| CLI flag pass-through (`--viewport`, `--browserUrl`, etc.) | ✓ | ✗ not yet — see [drop-in gaps](#drop-in-gaps) |
+| `--autoConnect` / attaching to a running Chrome | ✓ | ✗ not yet |
+| Upstream version | latest every `npx` | pins a tested `chrome-devtools-mcp` version per release |
+| Maintained by | Chrome DevTools team | this repo (thin wrapper over upstream) |
+| Runtime overhead | zero | one long-lived daemon process, one unix socket hop per tool call |
+
+**Rule of thumb:** if you only ever run one MCP client at a time, stick with
+vanilla. If you run two or more — different Claude Code sessions, an agent
+plus your own debugger, parallel test runners, etc. — the mux stops them from
+corrupting each other's state.
+
+### Drop-in gaps
+
+A small number of vanilla behaviors aren't plumbed through the mux yet. Open
+an issue if one matters to you:
+
+- **Arbitrary CLI args passed in `"args"`** (e.g. `--viewport=1920x1080`) are
+  currently ignored. The mux spawns upstream with a fixed set of flags.
+- **`--browserUrl`, `--wsEndpoint`, `--autoConnect`** — the mux always launches
+  its own Chromium; it doesn't yet know how to attach to one that's already
+  running.
+- **Upstream version** is pinned per release. If upstream ships a new tool,
+  the mux needs a version bump to expose it.
+
+For anything not on this list, the mux is behaviorally indistinguishable from
+vanilla for a single client, and strictly better for many.
 
 ## Install and configure
 
