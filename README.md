@@ -6,6 +6,30 @@
 Claude Code session, for example — gets its own isolated set of tabs, while
 they all run against the same single browser and profile.
 
+Agent 1:
+```
+❯ google
+  Called chrome-devtools-nightly (ctrl+o to expand)
+⏺ Google loaded.
+✻ Sautéed for 4s
+❯ list tabs
+  Called chrome-devtools-nightly (ctrl+o to expand)
+⏺ You have 1 tab open:
+  - Page 2: https://www.google.com/
+```
+Agent 2:
+```
+❯ open netflix
+  Called chrome-devtools-nightly (ctrl+o to expand)
+⏺ Now on Netflix!
+✻ Churned for 5s
+❯ list tabs
+  Called chrome-devtools-nightly (ctrl+o to expand)
+⏺ You have 1 tab open:
+  - Page 3: Netflix (https://www.netflix.com/ca/) [currently selected]
+```
+When agents get killed, their tabs are automatically closed.
+
 <p align="center">
   <img src="demo/artifacts/mux-demo.gif" alt="Two MCP clients, one Chrome, each seeing only its own tab" width="100%">
 </p>
